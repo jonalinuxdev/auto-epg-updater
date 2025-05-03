@@ -132,4 +132,4 @@ jobs:
           author_name: GitHub Actions
           author_email: actions@github.com
           message: 'Automated EPG update'
-          branch: main # Specifica il tuo branch principale se non è 'main'
+          branch: main 
