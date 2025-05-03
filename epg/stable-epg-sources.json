@@ -1,0 +1,5 @@
+{
+  "it": ["https://raw.githubusercontent.com/ipitv/backend/refs/heads/main/epg/xml/guide-epgitalia.xml"]
+,
+  "uk": ["https://raw.githubusercontent.com/ipitv/backend/refs/heads/main/epg/xml/guide-epg.xml"]
+}
