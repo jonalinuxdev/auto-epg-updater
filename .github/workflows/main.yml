@@ -1,0 +1,135 @@
+name: Daily EPG Update
+
+on:
+  schedule:
+    # Runs every day at 8:00 AM UTC, which is 9:00 AM London Time (BST/GMT depending on DST)
+    - cron: '0 8 * * *'
+
+jobs:
+  update_epg:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up jq (if not already present)
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Run EPG Download Script
+        run: |
+          #!/bin/bash
+          set -e
+
+          REPO_DIR="${GITHUB_WORKSPACE:-$(pwd)}"
+          INPUT_JSON="$REPO_DIR/epg/urls/link.json"
+          DEST_DIR="$REPO_DIR/epg/xml"
+          OUTPUT_JSON="$REPO_DIR/epg/stable-epg-sources.json"
+          RAW_BASE_URL="https://raw.githubusercontent.com/${{ github.repository }}/HEAD/epg/xml" # Usiamo HEAD per il branch corrente/default
+
+          echo "REPO_DIR: $REPO_DIR"
+          echo "INPUT_JSON: $INPUT_JSON"
+          echo "DEST_DIR: $DEST_DIR"
+          echo "OUTPUT_JSON: $OUTPUT_JSON"
+          echo "RAW_BASE_URL: $RAW_BASE_URL"
+
+
+          mkdir -p "$DEST_DIR"
+          # rm -f "$DEST_DIR"/*.xml # Commentato per sicurezza, riabilita se vuoi eliminare i vecchi file
+
+          echo "Inizio download EPG..."
+
+          declare -A country_links
+
+          # Controlla se il file JSON esiste
+          if [[ ! -f "$INPUT_JSON" ]]; then
+            echo "Errore: File input JSON non trovato: $INPUT_JSON"
+            exit 1
+          fi
+
+          # Usa jq per leggere le chiavi (paesi) e i link associati
+          mapfile -t countries < <(jq -r 'keys[]' "$INPUT_JSON")
+
+          if [ ${#countries[@]} -eq 0 ]; then
+              echo "Nessun paese trovato nel JSON. Uscita."
+              # Crea un JSON vuoto o con una struttura di base se non ci sono paesi
+              echo '{}' > "$OUTPUT_JSON"
+              exit 0 # Esci con successo anche se non ci sono paesi
+          fi
+
+
+          for country in "${countries[@]}"; do
+            mapfile -t urls < <(jq -r --arg c "$country" '.[$c][]' "$INPUT_JSON")
+            for url in "${urls[@]}"; do
+              filename=$(basename "$url")
+              base="${filename%.xml.gz}"
+              base="${base%.xml}"
+              output_file="guide-${base}.xml"
+              temp_file="temp_${base}.xml.gz" # Usa un nome temporaneo unico
+
+              echo "Scarico: $url"
+              # Aggiunge opzioni per timeout e retry
+              if curl -fsSL --connect-timeout 10 --retry 5 --retry-delay 5 "$url" -o "$temp_file"; then
+                # Usa 'file --mime-type --brief' per un output più pulito
+                mime_type=$(file --mime-type --brief "$temp_file")
+                echo "Detected MIME type: $mime_type"
+
+                if [[ "$mime_type" == "application/gzip" ]]; then
+                  echo "📦 Scompatto GZ: $temp_file"
+                  # Controlla se gunzip ha successo
+                  if gunzip -c "$temp_file" > "$DEST_DIR/$output_file"; then
+                      echo "✅ Scompattato e salvato: $DEST_DIR/$output_file"
+                      country_links["$country"]+="$RAW_BASE_URL/$output_file "
+                  else
+                      echo "❌ Errore nella scompattazione di $temp_file"
+                      rm -f "$temp_file" # Pulisci il file temporaneo danneggiato
+                  fi
+                elif [[ "$mime_type" == "application/xml" || "$mime_type" == "text/xml" ]]; then
+                  echo "File XML non compresso: Copio $temp_file"
+                  mv "$temp_file" "$DEST_DIR/$output_file"
+                  echo "✅ Copiato e salvato: $DEST_DIR/$output_file"
+                  country_links["$country"]+="$RAW_BASE_URL/$output_file "
+                else
+                   echo "❌ Tipo MIME sconosciuto o non supportato ($mime_type) per $url"
+                   rm -f "$temp_file" # Pulisci il file temporaneo sconosciuto
+                fi
+                rm -f "$temp_file" # Pulisci il file temporaneo originale
+              else
+                echo "❌ Errore nel download o timeout: $url"
+              fi
+            done
+          done
+
+
+          # Scrittura JSON finale
+          echo "Creo JSON: $OUTPUT_JSON"
+          echo '{' > "$OUTPUT_JSON"
+          first_country=1
+          for country in "${!country_links[@]}"; do
+            [[ $first_country -eq 0 ]] && echo ',' >> "$OUTPUT_JSON"
+            first_country=0
+            echo -n "  \"$country\": [" >> "$OUTPUT_JSON"
+            IFS=' ' read -r -a urls <<< "${country_links[$country]}"
+            first_url=1
+            for url in "${urls[@]}"; do
+              [[ $first_url -eq 0 ]] && echo -n ', ' >> "$OUTPUT_JSON"
+              first_url=0
+              echo -n "\"${url}\"" >> "$OUTPUT_JSON"
+            done
+            echo "]" >> "$OUTPUT_JSON"
+          done
+          echo '}' >> "$OUTPUT_JSON"
+
+          echo "✅ JSON creato: $OUTPUT_JSON"
+          cat "$OUTPUT_JSON" # Stampa il JSON creato per debug
+
+
+      - name: Commit and push changes
+        uses: EndBug/add-and-commit@v9
+        with:
+          # Aggiunge solo i file modificati/creati nella directory epg
+          add: 'epg/xml/*.xml epg/stable-epg-sources.json'
+          author_name: GitHub Actions
+          author_email: actions@github.com
+          message: 'Automated EPG update'
+          branch: main # Specifica il tuo branch principale se non è 'main'
