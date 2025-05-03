@@ -2,13 +2,14 @@ name: Daily EPG Update
 
 on:
   schedule:
-    # Runs every day at 8:00 AM UTC, which is 9:00 AM London Time (BST/GMT depending on DST)
     - cron: '0 8 * * *'
-  workflow_dispatch: # Aggiungi questa riga per abilitare l'esecuzione manuale
+  workflow_dispatch:
 
 jobs:
   update_epg:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
@@ -26,7 +27,7 @@ jobs:
           INPUT_JSON="$REPO_DIR/epg/urls/link.json"
           DEST_DIR="$REPO_DIR/epg/xml"
           OUTPUT_JSON="$REPO_DIR/epg/stable-epg-sources.json"
-          RAW_BASE_URL="https://raw.githubusercontent.com/${{ github.repository }}/HEAD/epg/xml" # Usiamo HEAD per il branch corrente/default
+          RAW_BASE_URL="https://raw.githubusercontent.com/${{ github.repository }}/HEAD/epg/xml"
 
           echo "REPO_DIR: $REPO_DIR"
           echo "INPUT_JSON: $INPUT_JSON"
@@ -36,26 +37,22 @@ jobs:
 
 
           mkdir -p "$DEST_DIR"
-          # rm -f "$DEST_DIR"/*.xml # Commentato per sicurezza, riabilita se vuoi eliminare i vecchi file
 
           echo "Inizio download EPG..."
 
           declare -A country_links
 
-          # Controlla se il file JSON esiste
           if [[ ! -f "$INPUT_JSON" ]]; then
             echo "Errore: File input JSON non trovato: $INPUT_JSON"
             exit 1
           fi
 
-          # Usa jq per leggere le chiavi (paesi) e i link associati
           mapfile -t countries < <(jq -r 'keys[]' "$INPUT_JSON")
 
           if [ ${#countries[@]} -eq 0 ]; then
               echo "Nessun paese trovato nel JSON. Uscita."
-              # Crea un JSON vuoto o con una struttura di base se non ci sono paesi
               echo '{}' > "$OUTPUT_JSON"
-              exit 0 # Esci con successo anche se non ci sono paesi
+              exit 0
           fi
 
 
@@ -66,24 +63,21 @@ jobs:
               base="${filename%.xml.gz}"
               base="${base%.xml}"
               output_file="guide-${base}.xml"
-              temp_file="temp_${base}.xml.gz" # Usa un nome temporaneo unico
+              temp_file="temp_${base}.xml.gz"
 
               echo "Scarico: $url"
-              # Aggiunge opzioni per timeout e retry
               if curl -fsSL --connect-timeout 10 --retry 5 --retry-delay 5 "$url" -o "$temp_file"; then
-                # Usa 'file --mime-type --brief' per un output più pulito
                 mime_type=$(file --mime-type --brief "$temp_file")
                 echo "Detected MIME type: $mime_type"
 
                 if [[ "$mime_type" == "application/gzip" ]]; then
                   echo "📦 Scompatto GZ: $temp_file"
-                  # Controlla se gunzip ha successo
                   if gunzip -c "$temp_file" > "$DEST_DIR/$output_file"; then
                       echo "✅ Scompattato e salvato: $DEST_DIR/$output_file"
                       country_links["$country"]+="$RAW_BASE_URL/$output_file "
                   else
                       echo "❌ Errore nella scompattazione di $temp_file"
-                      rm -f "$temp_file" # Pulisci il file temporaneo danneggiato
+                      rm -f "$temp_file"
                   fi
                 elif [[ "$mime_type" == "application/xml" || "$mime_type" == "text/xml" ]]; then
                   echo "File XML non compresso: Copio $temp_file"
@@ -92,9 +86,9 @@ jobs:
                   country_links["$country"]+="$RAW_BASE_URL/$output_file "
                 else
                    echo "❌ Tipo MIME sconosciuto o non supportato ($mime_type) per $url"
-                   rm -f "$temp_file" # Pulisci il file temporaneo sconosciuto
+                   rm -f "$temp_file"
                 fi
-                rm -f "$temp_file" # Pulisci il file temporaneo originale
+                rm -f "$temp_file"
               else
                 echo "❌ Errore nel download o timeout: $url"
               fi
@@ -102,7 +96,6 @@ jobs:
           done
 
 
-          # Scrittura JSON finale
           echo "Creo JSON: $OUTPUT_JSON"
           echo '{' > "$OUTPUT_JSON"
           first_country=1
@@ -122,15 +115,13 @@ jobs:
           echo '}' >> "$OUTPUT_JSON"
 
           echo "✅ JSON creato: $OUTPUT_JSON"
-          cat "$OUTPUT_JSON" # Stampa il JSON creato per debug
+          cat "$OUTPUT_JSON"
 
 
       - name: Commit and push changes
         uses: EndBug/add-and-commit@v9
         with:
-          # Aggiunge solo i file modificati/creati nella directory epg
           add: 'epg/xml/*.xml epg/stable-epg-sources.json'
           author_name: GitHub Actions
           author_email: actions@github.com
           message: 'Automated EPG update'
-          branch: main # Specifica il tuo branch principale se non è 'main'
