@@ -76,21 +76,22 @@ jobs:
                       echo "✅ Scompattato e salvato: $DEST_DIR/$output_file"
                       country_links["$country"]+="$RAW_BASE_URL/$output_file "
                   else
-                      echo "❌ Errore nella scompattazione di $temp_file"
+                      echo "⚠️ Errore nella scompattazione di $temp_file"
                       rm -f "$temp_file"
                   fi
-                elif [[ "$mime_type" == "application/xml" || "$mime_type" == "text/xml" ]]; then
-                  echo "File XML non compresso: Copio $temp_file"
+                # Modifica: Aggiungi '|| "$mime_type" == "text/plain"' alla condizione
+                elif [[ "$mime_type" == "application/xml" || "$mime_type" == "text/xml" || "$mime_type" == "text/plain" ]]; then
+                  echo "File XML non compresso (o text/plain): Copio $temp_file"
                   mv "$temp_file" "$DEST_DIR/$output_file"
                   echo "✅ Copiato e salvato: $DEST_DIR/$output_file"
                   country_links["$country"]+="$RAW_BASE_URL/$output_file "
                 else
-                   echo "❌ Tipo MIME sconosciuto o non supportato ($mime_type) per $url"
+                   echo "⚠️ Tipo MIME inaspettato o non gestito ($mime_type) per $url" # Modifica il messaggio per maggiore chiarezza
                    rm -f "$temp_file"
                 fi
                 rm -f "$temp_file"
               else
-                echo "❌ Errore nel download o timeout: $url"
+                echo "⚠️ Errore nel download o timeout: $url"
               fi
             done
           done
@@ -125,3 +126,8 @@ jobs:
           author_name: GitHub Actions
           author_email: actions@github.com
           message: 'Automated EPG update'
+
+
+
+
+          
