@@ -4,6 +4,7 @@ on:
   schedule:
     # Runs every day at 8:00 AM UTC, which is 9:00 AM London Time (BST/GMT depending on DST)
     - cron: '0 8 * * *'
+  workflow_dispatch: # Aggiungi questa riga per abilitare l'esecuzione manuale
 
 jobs:
   update_epg:
@@ -132,4 +133,4 @@ jobs:
           author_name: GitHub Actions
           author_email: actions@github.com
           message: 'Automated EPG update'
-          branch: main 
+          branch: main # Specifica il tuo branch principale se non è 'main'
