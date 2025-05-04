@@ -1,4 +1,4 @@
-🕒 Inizio download EPG: 2025-05-04 16:33
+🕒 Inizio download EPG: 2025-05-04 16:40
 
 Scarico: http://rebrand.ly/epgitalia
 Detected MIME type: application/gzip

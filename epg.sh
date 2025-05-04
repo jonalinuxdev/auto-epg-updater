@@ -98,6 +98,14 @@ echo
 echo "✅ Completato: $OUTPUT_JSON"
 } | tee "$log_file"
 
+# Salva log in file
+log_file="epg.log"
+exec > >(tee "$log_file") 2>&1
+
+# (qui va il corpo dello script, poi alla fine:)
+
+TEMP_README="README.tmp"
+
 # Inserisce log e timestamp in cima al README
 {
   echo "## 📝 Ultima esecuzione"
