@@ -1,5 +1,5 @@
 {
-  "it": ["https://raw.githubusercontent.com/jonalinuxdev/auto-epg-updater/HEAD/epg/xml/guide-epgitalia.xml"]
+  "it": ["https://raw.githubusercontent.com/jonalinuxdev/auto-epg-updater/refs/heads/main/epg/xml/guide-epgitalia.xml"]
 ,
-  "uk": ["https://raw.githubusercontent.com/jonalinuxdev/auto-epg-updater/HEAD/epg/xml/guide-epg.xml"]
+  "uk": ["https://raw.githubusercontent.com/jonalinuxdev/auto-epg-updater/refs/heads/main/epg/xml/guide-epg.xml"]
 }
