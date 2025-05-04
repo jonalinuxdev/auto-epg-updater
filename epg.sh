@@ -10,7 +10,6 @@ DEST_DIR="epg/xml"
 OUTPUT_JSON="epg/stable-epg-sources.json"
 RAW_BASE_URL="https://raw.githubusercontent.com/jonalinuxdev/auto-epg-updater/refs/heads/main/epg/xml"
 log_file="epg.log"
-TEMP_README="README.tmp"
 
 # 📜 Redirezione log
 exec > >(tee "$log_file") 2>&1
@@ -101,31 +100,19 @@ echo '}' >> "$OUTPUT_JSON"
 echo
 echo "✅ Completato: $OUTPUT_JSON"
 
-# 📝 Scrive log in README.md
+# 📝 Scrive README.md da zero
 {
   echo "## 📜 Ultima esecuzione"
   echo
   echo "- Data: $timestamp"
   echo "- Totale paesi: ${#countries[@]}"
   echo
-  awk '
-    BEGIN {skip=0}
-    /^## 📜 Ultima esecuzione/ {skip=1; next}
-    skip && /^## / {skip=0}
-    skip == 0 {print}
-  ' README.md
-} > "$TEMP_README"
-
-mv "$TEMP_README" README.md
-
-{
-  echo
   echo "## 📜 Log dettagliato ultima esecuzione"
   echo
   echo '```bash'
   cat "$log_file"
   echo '```'
-} >> README.md
+} > README.md
 
 # 🔁 Git auto-commit & push
 cd "$(dirname "$0")"
