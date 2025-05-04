@@ -1,5 +1,5 @@
 📁 Directory di lavoro: /home/server/auto-epg-updater
-🕒 Inizio download EPG: 2025-05-04 16:51
+🕒 Inizio download EPG: 2025-05-04 16:52
 INPUT_JSON: epg/urls/link.json
 DEST_DIR: epg/xml
 OUTPUT_JSON: epg/stable-epg-sources.json
