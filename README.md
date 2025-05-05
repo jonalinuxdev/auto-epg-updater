@@ -1,13 +1,13 @@
 ## 📜 Ultima esecuzione
 
-- Data: 2025-05-04 17:04
+- Data: 2025-05-05 09:00
 - Totale paesi: 2
 
 ## 📜 Log dettagliato ultima esecuzione
 
 ```bash
 📁 Directory di lavoro: /home/server/auto-epg-updater
-🕒 Inizio download EPG: 2025-05-04 17:04
+🕒 Inizio download EPG: 2025-05-05 09:00
 INPUT_JSON: epg/urls/link.json
 DEST_DIR: epg/xml
 OUTPUT_JSON: epg/stable-epg-sources.json
